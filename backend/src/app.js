@@ -1,6 +1,7 @@
 const express = require('express')
 const database = require('./configuration/database')
 const User = require("./models/models")
+const {isValidated,checkCredentials} = require('./utils/validate.js')
 
 const app = express()
 app.use(express.json())
@@ -10,17 +11,42 @@ app.use(express.json())
 app.post('/user',async(req,res)=>{
    
     try{
-        if(req.body.skills.length>3)
+       const hashedPassword = await  isValidated(req) //helper function
+        const {firstName,lastName,email,password} = req.body
+        
+        if(req.body.skills?.length>3)
         {
             throw new Error('more than 3 skills are not allowed')
         }
-        const insert = await User.insertOne(req.body,{runValidators:true})
+        const insert = await User.insertOne({
+            firstName,
+            lastName,
+            email,
+            password:hashedPassword,
+        },{runValidators:true})
         console.log(insert)
         res.send('data inserted successfully')
     }
     catch(err)
     {
         res.status(400).send('data not sent : '+ err.message)
+    }
+});
+
+app.post('/login',async(req,res)=>{
+    try{
+        const isUser = await checkCredentials(req)  //helper function
+        if(isUser)
+        {
+            res.send("user logged-in")
+        }
+        else{
+            throw new Error("Invalid password")
+        }
+    }
+    catch(err)
+    {
+        res.send("ERROR : " + err.message)
     }
 })
 
