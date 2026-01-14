@@ -10,13 +10,17 @@ app.use(express.json())
 app.post('/user',async(req,res)=>{
    
     try{
-        const insert = await User.insertOne(req.body)
+        if(req.body.skills.length>3)
+        {
+            throw new Error('more than 3 skills are not allowed')
+        }
+        const insert = await User.insertOne(req.body,{runValidators:true})
         console.log(insert)
         res.send('data inserted successfully')
     }
     catch(err)
     {
-        res.status(400).send('data not sent'+ err)
+        res.status(400).send('data not sent : '+ err.message)
     }
 })
 
@@ -64,9 +68,16 @@ app.delete('/deleteuser',async(req,res)=>{
 
 app.patch('/updateuser/:email',async(req,res)=>{
     try{
+
     const userId = req.params
     const data = req.body
-    const user = await User.findOneAndUpdate(userId,data)
+    const ALLOWED = ["age","gender","skill","about"]
+    const is_Allowed = Object.keys(data).every(k=>ALLOWED.includes(k))
+    if(!is_Allowed)
+    {
+        throw new Error('certain fields are restricted to update')
+    }
+    const user = await User.findOneAndUpdate(userId,data,{runValidators:true})
     if(!user)
     {
         res.status(404).send('user not found')
@@ -77,7 +88,7 @@ app.patch('/updateuser/:email',async(req,res)=>{
     }
     catch(err)
     {
-        res.status(500).send('something went wrong')
+        res.status(500).send('something went wrong:'+ err.message)
     }
 
 })
